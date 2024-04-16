@@ -1,6 +1,5 @@
 #include <Windows.h>
 #include <cstdint>
-#include <windows.h>
 #include <string>
 #include <format>
 //初期化
@@ -9,6 +8,16 @@
 #include <cassert>
 #pragma comment(lib,"d3d12.lib")
 #pragma comment(lib,"dxgi.lib")
+
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+	switch (msg) {
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		return 0;
+	}
+
+	return DefWindowProc(hwnd, msg, wparam, lparam);
+}
 
 std::wstring ConvertString(const std::string& str) {
 	if (str.empty()) {
@@ -38,16 +47,12 @@ std::string ConvertString(const std::wstring& str) {
 	return result;
 }
 
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
-	switch (msg) {
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		return 0;
-	}
-
-	return DefWindowProc(hwnd, msg, wparam, lparam);
+void Log(const std::string& message) {
+	OutputDebugStringA(message.c_str());
 }
-
+void Log(const std::wstring& message) {
+	OutputDebugStringA(ConvertString(message).c_str());
+}
 
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
@@ -57,9 +62,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	wc.hInstance = GetModuleHandle(nullptr);
 	wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
 
-	void Log(const std::string& message) {
-		OutputDebugSrtingA(message.c_str());
-	}
+	
 
 	RegisterClass(&wc);
 
