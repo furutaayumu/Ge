@@ -161,7 +161,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	hr = dxgiFactory->CreateSwapChainForHwnd(commandQueue, hwnd, &SwapChainDesc, nullptr, nullptr, reinterpret_cast<IDXGISwapChain1**>(&SwapChain));
 	assert(SUCCEEDED(hr));
 
-	//descriptorheap
+	//DescriptorHeap
 	ID3D12DescriptorHeap* rtvDescriptorHeap = nullptr;
 	D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc{};
 	rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -177,6 +177,30 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	assert(SUCCEEDED(hr));
 
 	assert(SUCCEEDED(hr));
+
+	//RTVを作る
+	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
+	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvStartHandle = rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle[2];
+
+	rtvHandle[0] = rtvStartHandle;
+	device->CreateRenderTargetView(SwapChainResources[1], &rtvDesc, rtvHandle[1]);
+	
+	//画面色の変更
+	UINT backBufferIndex = SwapChain->GetCurrentBackBufferIndex();
+	commandList->OMSetRenderTargets(1, &rtvHandle[backBufferIndex], false, nullptr);
+
+	float clearColor[] = { 0.1f,0.25f,0.5f,1.0f };
+	commandList->ClearRenderTargetView(rtvHandle[backBufferIndex], clearColor, 0, nullptr);
+	hr = commandList->Close();
+	assert(SUCCEEDED(hr));
+
+	//コマンドをキックする
+
+
 	//メインループ
 	MSG msg{};
 
