@@ -405,7 +405,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//書きこみ
 	Vector4* vertexData = nullptr;
 
-	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(vertexData));
+	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
 	vertexData[0] = { -0.5f,-0.5f,0.0f,1.0f };
 	vertexData[1] = { 0.0f,0.5f,0.0f,1.0f };
 	vertexData[2] = { 0.5f,-0.5f,0.0f,1.0f };

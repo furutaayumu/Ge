@@ -1,8 +1,3 @@
-float4 main( float4 pos : POSITION ) : SV_POSITION
-{
-	return pos;
-}
-
 struct PixelShaderOutput
 {
     float32_t4 color : SV_TARGET0;
