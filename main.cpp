@@ -88,7 +88,7 @@ IDxcBlob* CompileShader(
 		L"-E",L"main",
 		L"-T",profile,
 		L"-Zi",L"-Qembed_debug",
-		L"-0d",L"-Zpr",
+		L"-Od",L"-Zpr",
 	};
 	IDxcResult* shaderResult = nullptr;
 	hr = dxcCompiler->Compile(
@@ -158,7 +158,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	//表示	
 	ShowWindow(hwnd, SW_SHOW);
-
+#ifdef _DEBUG
+	ID3D12Debug1* debugController = nullptr;
+	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
+		debugController->EnableDebugLayer();
+		debugController->SetEnableGPUBasedValidation(TRUE);
+	}
+#endif
 
 	IDXGIFactory7* dxgiFactory = nullptr;
 	HRESULT hr = CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory));
@@ -221,13 +227,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	hr = dxcUtils->CreateDefaultIncludeHandler(&inCludehandler);
 	assert(SUCCEEDED(hr));
 
-#ifdef _DEBUG
-	ID3D12Debug1* debugController = nullptr;
-	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
-		debugController->EnableDebugLayer();
-		debugController->SetEnableGPUBasedValidation(TRUE);
-	}
-#endif
+
 
 #ifdef _DEBUG
 	ID3D12InfoQueue* infoQueue = nullptr;
