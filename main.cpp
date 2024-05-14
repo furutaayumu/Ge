@@ -105,17 +105,18 @@ IDxcBlob* CompileShader(
 	if (shaderError != nullptr && shaderError->GetStringLength() != 0) {
 		Log(shaderError->GetStringPointer());
 		assert(false);
-		//受け取って渡す
-		IDxcBlob* shaderBlob = nullptr;
-		hr = shaderResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderError), nullptr);
-		assert(SUCCEEDED(hr));
-		Log(ConvertString(std::format(L"compile succeeded,path:{},profile:{}\n", filePath, profile)));
-
+		
 		shaderSource->Release();
 		shaderResult->Release();
 
-		return shaderBlob;
+	
 	}
+	//受け取って渡す
+	IDxcBlob* shaderBlob = nullptr;
+	hr = shaderResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderError), nullptr);
+	assert(SUCCEEDED(hr));
+	Log(ConvertString(std::format(L"compile succeeded,path:{},profile:{}\n", filePath, profile)));
+	return shaderBlob;
 }
 
 
