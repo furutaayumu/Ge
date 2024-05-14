@@ -204,6 +204,67 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	assert(device != nullptr);
 	Log("Complate create D3D12Device\n");
+
+	//コマンドライン
+	ID3D12CommandQueue* commandQueue = nullptr;
+	D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
+	hr = device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&commandQueue));
+
+	assert(SUCCEEDED(hr));
+	//コマンドアロケーターを生成
+	ID3D12CommandAllocator* commandAllocator = nullptr;
+	hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator));
+
+	assert(SUCCEEDED(hr));
+
+	//コマンドリストを生成
+	ID3D12GraphicsCommandList* commandList = nullptr;
+	hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
+	assert(SUCCEEDED(hr));
+
+	//スワップチェーン
+	IDXGISwapChain4* SwapChain = nullptr;
+	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc{};
+	SwapChainDesc.Width = kClientWidth;
+	SwapChainDesc.Height = kClientHeight;
+	SwapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	SwapChainDesc.SampleDesc.Count = 1;
+	SwapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	SwapChainDesc.BufferCount = 2;
+	SwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+
+	hr = dxgiFactory->CreateSwapChainForHwnd(commandQueue, hwnd, &SwapChainDesc, nullptr, nullptr, reinterpret_cast<IDXGISwapChain1**>(&SwapChain));
+	assert(SUCCEEDED(hr));
+
+	//DescriptorHeap
+	ID3D12DescriptorHeap* rtvDescriptorHeap = nullptr;
+	D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc{};
+	rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	rtvDescriptorHeapDesc.NumDescriptors = 2;
+	hr = device->CreateDescriptorHeap(&rtvDescriptorHeapDesc, IID_PPV_ARGS(&rtvDescriptorHeap));
+
+	//resourceを引っ張ってくる
+	ID3D12Resource* SwapChainResources[2] = { nullptr };
+	hr = SwapChain->GetBuffer(0, IID_PPV_ARGS(&SwapChainResources[0]));
+
+	assert(SUCCEEDED(hr));
+	hr = SwapChain->GetBuffer(1, IID_PPV_ARGS(&SwapChainResources[1]));
+	assert(SUCCEEDED(hr));
+
+	assert(SUCCEEDED(hr));
+
+	//RTVを作る
+	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
+	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvStartHandle = rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle[2];
+
+	rtvHandle[0] = rtvStartHandle;
+	device->CreateRenderTargetView(SwapChainResources[0], &rtvDesc, rtvHandle[0]);
+	rtvHandle[1].ptr = rtvHandle[0].ptr + device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	device->CreateRenderTargetView(SwapChainResources[1], &rtvDesc, rtvHandle[1]);
 	
 //fenceevent
 	ID3D12Fence* fence = nullptr;
@@ -252,66 +313,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	}
 #endif
 
-	//コマンドライン
-	ID3D12CommandQueue* commandQueue = nullptr;
-	D3D12_COMMAND_QUEUE_DESC commandQueueDesc{};
-	hr = device->CreateCommandQueue(&commandQueueDesc, IID_PPV_ARGS(&commandQueue));
 
-	assert(SUCCEEDED(hr));
-	//コマンドアロケーターを生成
-	ID3D12CommandAllocator* commandAllocator = nullptr;
-	hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator));
-
-	assert(SUCCEEDED(hr));
-
-	//コマンドリストを生成
-	ID3D12GraphicsCommandList* commandList = nullptr;
-	hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
-	assert(SUCCEEDED(hr));
-
-	//スワップチェーン
-	IDXGISwapChain4* SwapChain = nullptr;
-	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc{};
-	SwapChainDesc.Width = kClientWidth;
-	SwapChainDesc.Height = kClientHeight;
-	SwapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	SwapChainDesc.SampleDesc.Count = 1;
-	SwapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	SwapChainDesc.BufferCount = 2;
-	SwapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	
-	hr = dxgiFactory->CreateSwapChainForHwnd(commandQueue, hwnd, &SwapChainDesc, nullptr, nullptr, reinterpret_cast<IDXGISwapChain1**>(&SwapChain));
-	assert(SUCCEEDED(hr));
-
-	//DescriptorHeap
-	ID3D12DescriptorHeap* rtvDescriptorHeap = nullptr;
-	D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc{};
-	rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	rtvDescriptorHeapDesc.NumDescriptors = 2;
-	hr = device->CreateDescriptorHeap(&rtvDescriptorHeapDesc, IID_PPV_ARGS(&rtvDescriptorHeap));
-	
-	//resourceを引っ張ってくる
-	ID3D12Resource* SwapChainResources[2] = { nullptr };
-	hr = SwapChain->GetBuffer(0, IID_PPV_ARGS(&SwapChainResources[0]));
-
-	assert(SUCCEEDED(hr));
-	hr = SwapChain->GetBuffer(1, IID_PPV_ARGS(&SwapChainResources[1]));
-	assert(SUCCEEDED(hr));
-
-	assert(SUCCEEDED(hr));
-
-	//RTVを作る
-	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
-	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-	rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvStartHandle = rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle[2];
-
-	rtvHandle[0] = rtvStartHandle;
-	device->CreateRenderTargetView(SwapChainResources[0], &rtvDesc, rtvHandle[0]);
-	rtvHandle[1].ptr = rtvHandle[0].ptr + device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	device->CreateRenderTargetView(SwapChainResources[1], &rtvDesc, rtvHandle[1]);
 
 	//rootsignatrue作成
 	D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
@@ -464,23 +466,27 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			hr = commandList->Close();
 			assert(SUCCEEDED(hr));
 
-			//コマンドをキックする
-			ID3D12CommandList* commandLists[] = { commandList };
-			commandQueue->ExecuteCommandLists(1, commandLists);
-			SwapChain->Present(1, 0);
+
 			//fenceの値を更新
 			fenceValue++;
 			commandQueue->Signal(fence, fenceValue);
 
-			if (fence->GetCompletedValue() < fenceValue) {
-				fence->SetEventOnCompletion(fenceValue, fenceEvent);
-				WaitForSingleObject(fenceEvent, INFINITE);
-			}
+
 
 			hr = commandAllocator->Reset();
 			assert(SUCCEEDED(hr));
 			hr = commandList->Reset(commandAllocator, nullptr);
 			assert(SUCCEEDED(hr));
+
+			//コマンドをキックする
+			ID3D12CommandList* commandLists[] = { commandList };
+			commandQueue->ExecuteCommandLists(1, commandLists);
+			SwapChain->Present(1, 0);
+
+						if (fence->GetCompletedValue() < fenceValue) {
+				fence->SetEventOnCompletion(fenceValue, fenceEvent);
+				WaitForSingleObject(fenceEvent, INFINITE);
+			}
 		}
 	}
 	//`解放
