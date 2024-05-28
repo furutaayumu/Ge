@@ -294,12 +294,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//解放
 		infoQueue->Release();
 	}
-#endif
+
 
 	//抑制するメッセージのID
 	D3D12_MESSAGE_ID denyIds[] = {
 		//WindowsでのDXGIデバックレイヤーとDX12デバックレイヤーの相互作用バグによるエラーメッセージ
-		//https//stackoverflow.com/question/6980524/directx-12-application-is-crashing-in-windows-11
+		//
 		D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE
 	};
 	//抑制するレベル
@@ -310,9 +310,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	filter.DenyList.NumSeverities = _countof(severities);
 	filter.DenyList.pSeverityList = severities;
 	//指定したメッセージの表示を抑制する
-	infoQueue->PushStorageFilter(&filter);
+	/*infoQueue->PushStorageFilter(&filter);*/
 
-
+#endif
 
 	//コマンドキューを生成する
 	ID3D12CommandQueue* commandQueue = nullptr;
