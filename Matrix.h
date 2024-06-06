@@ -34,7 +34,7 @@ Matrix4x4 Multiply(const Matrix4x4& m1, const Matrix4x4& m2) {
 Matrix4x4 MakeTranslateMatrix(const Vector3& translate);
 Matrix4x4 MakeTranslateMatrix(const Vector3& translate) {
 	Matrix4x4 ret = {};
-	ret.m[0][0]=1.0f;
+	ret.m[0][0] = 1.0f;
 	ret.m[1][1] = 1.0f;
 	ret.m[2][2] = 1.0f;
 	ret.m[3][3] = 1.0f;
@@ -180,7 +180,7 @@ Matrix4x4 Invers(const Matrix4x4& m) {
 		- m.m[0][2] * m.m[1][1] * m.m[2][0] - m.m[0][1] * m.m[1][0] * m.m[2][2] - m.m[0][0] * m.m[1][2] * m.m[2][1]) * ReAScore;
 
 	return Result;
-}
+}	
 
 // 1.透視投影行列
 Matrix4x4 MakePerspectiveFovMatrix(float fovY, float aspectRatio, float nearClip, float farClip) {
@@ -208,5 +208,3 @@ Matrix4x4 MakePerspectiveFovMatrix(float fovY, float aspectRatio, float nearClip
 	ret.m[3][3] = 0.0f;
 	return ret;
 }
-
-
