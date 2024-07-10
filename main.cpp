@@ -13,11 +13,17 @@
 #include"externals/DirectXTex/DirectXTex.h"
 #include"Matrix.h"
 #include"Transform.h"
+#include "vector"
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #pragma comment(lib,"d3d12.lib")
 #pragma comment(lib,"dxgi.lib")
 #pragma comment(lib,"dxguid.lib")
 #pragma comment(lib,"dxcompiler.lib")
+
+struct Vector2 {
+	float x;
+	float y;
+};
 
 struct Vector4 {
 	float x;
@@ -28,7 +34,7 @@ struct Vector4 {
 
 struct VertexData {
 	Vector4 position;
-	Vector4 texcord;
+	Vector2 texcord;
 };
 
 
@@ -270,9 +276,8 @@ ID3D12DescriptorHeap* CreateDescriptorHeap(
 
 
 
-
 //Windowsアプリでのエントリーポイント(main関数)
-int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
+int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	CoInitializeEx(0, COINIT_MULTITHREADED);
 
@@ -690,7 +695,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	D3D12_RESOURCE_DESC vertexResourceDesc{};
 	//バッファリソース、テクチャの場合はまた別の設定をする
 	vertexResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	vertexResourceDesc.Width = sizeof(Vector4) * 3;//リソースのサイズ。今回はVector4を３頂点分」
+	vertexResourceDesc.Width = sizeof(VertexData) * 3;//リソースのサイズ。今回はVector4を３頂点分」
 	//バッファの場合はこれらは１にする決まり
 	vertexResourceDesc.Height = 1;
 	vertexResourceDesc.DepthOrArraySize = 1;
@@ -703,14 +708,28 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ID3D12Resource* vertexResource = nullptr;
 	hr = device->CreateCommittedResource(&uploadHeapProoerties, D3D12_HEAP_FLAG_NONE, &vertexResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexResource));
 	assert(SUCCEEDED(hr));
+
+	//頂点リソースにデータを書き込む
+	VertexData* vertexData = nullptr;
+	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
+
+	vertexData[0].position = { 0.5f,-0.5f,0.0f,1.0f };
+	vertexData[0].texcord = { 0.0f,1.0f };
+
+	vertexData[1].position = { 0.0f,0.5f,0.0f,.0f };
+	vertexData[1].texcord = { 0.5f,0.0f };
+
+	vertexData[2].position = { 0.5f,-0.5f,0.0f,1.0f };
+	vertexData[2].texcord = { 1.0f,1.0f };
+
 	//頂点バッファビューを作成する
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
 	//リソースの先頭のアドレスから使う
 	vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
 	//仕様するリソースのサイズは頂点３つ分のサイズ
-	vertexBufferView.SizeInBytes = sizeof(Vector4) * 3;
+	vertexBufferView.SizeInBytes = sizeof(VertexData) * 3;
 	//1頂点当たりのサイズ
-	vertexBufferView.StrideInBytes = sizeof(Vector4);
+	vertexBufferView.StrideInBytes = sizeof(VertexData);
 
 	//頂点リソースにデータを書き込む
 
@@ -744,19 +763,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	//単位行列を書き込んでおく
 	*wvpData = MakeIdentity4x4();
-
-	//頂点リソースにデータを書き込む
-	VertexData* vertexData = nullptr;
-	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
-
-	vertexData[0].position = { 0.5f,-0.5f,0.0f,1.0f };
-	vertexData[0].texcord = { 0.0f,1.0f };
-
-	vertexData[1].position = { 0.0f,0.5f,0.0f,.0f };
-	vertexData[1].texcord = { 0.5f,0.0f };
-
-	vertexData[2].position = { 0.5f,-0.5f,0.0f,1.0f };
-	vertexData[2].texcord = { 1.0f,1.0f };
 
 	//inputlayoutの拡張
 
