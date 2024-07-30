@@ -604,8 +604,15 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	descriptionRootSignature.Flags =
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
+	D3D12_DESCRIPTOR_RANGE descriptorRange[1] = {};
+	descriptorRange[0].BaseShaderRegister = 0;
+	descriptorRange[0].NumDescriptors = 1;
+	descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+
 	//RootParameter作成。複数設定出来るので配列。今回は結果が一つだけなので長さ１の配列
-	D3D12_ROOT_PARAMETER rootParameters[2] = {};
+	D3D12_ROOT_PARAMETER rootParameters[3] = {};
 	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;//CBVを使う
 	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;//PixelShaderで使う
 	rootParameters[0].Descriptor.ShaderRegister = 0;//レジスタ番号０とバインド
@@ -615,7 +622,24 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	descriptionRootSignature.pParameters = rootParameters;//ルートパラメータ配列へのポインタ
 	descriptionRootSignature.NumParameters = _countof(rootParameters);//配列の長さ
 
+	rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	rootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;
+	rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
 
+	D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
+	staticSamplers[0].Filter = D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR;
+	staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSamplers[0].ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+	staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;
+	staticSamplers[0].ShaderRegister = 0;
+	staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	descriptionRootSignature.pStaticSamplers = staticSamplers;
+	descriptionRootSignature.NumStaticSamplers = _countof(staticSamplers);
+
+	
 
 
 
@@ -641,7 +665,7 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	inputElementDescs[0].SemanticIndex = 0;
 	inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	inputElementDescs[0].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-	inputElementDescs[1].SemanticName = "TEXCORD";
+	inputElementDescs[1].SemanticName = "TEXCOORD";
 	inputElementDescs[1].SemanticIndex = 0;
 	inputElementDescs[1].Format = DXGI_FORMAT_R32G32_FLOAT;
 	inputElementDescs[1].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
@@ -709,14 +733,16 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	hr = device->CreateCommittedResource(&uploadHeapProoerties, D3D12_HEAP_FLAG_NONE, &vertexResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexResource));
 	assert(SUCCEEDED(hr));
 
+
+
 	//頂点リソースにデータを書き込む
 	VertexData* vertexData = nullptr;
 	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
 
-	vertexData[0].position = { 0.5f,-0.5f,0.0f,1.0f };
+	vertexData[0].position = { -0.5f,-0.5f,0.0f,1.0f };
 	vertexData[0].texcord = { 0.0f,1.0f };
 
-	vertexData[1].position = { 0.0f,0.5f,0.0f,.0f };
+	vertexData[1].position = { 0.0f,0.5f,0.0f,1.0f };
 	vertexData[1].texcord = { 0.5f,0.0f };
 
 	vertexData[2].position = { 0.5f,-0.5f,0.0f,1.0f };
@@ -759,7 +785,7 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	//今回は赤を書き込んでみる
 
-	*materialData = Vector4(1.0f, 0.0f, 0.0f, 1.0f);//*materialData = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
+	*materialData = Vector4(1.0f, 1.0f, 1.0f, 1.0f);//*materialData = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
 
 	//単位行列を書き込んでおく
 	*wvpData = MakeIdentity4x4();
@@ -892,8 +918,10 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
 
 			//wvp用のCBufferの場所を設定\
-			\
+			
 			commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
+
+			commandList->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
 
 			//ImGuiの内部コマンドを生成する
 			ImGui::Render();
