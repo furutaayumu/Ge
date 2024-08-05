@@ -40,8 +40,14 @@ struct VertexData {
 	Vector3 normal;
 };
 
+struct MaterialData {
+	std::string textureFilepath;
+};
+
 struct ModelData {
 	std::vector<VertexData>vertices;
+	MaterialData material;
+	
 };
 
 
@@ -67,6 +73,34 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 
 	//標準のメッセージ処理を行う
 	return DefWindowProc(hwnd, msg, wparam, lparam);
+
+}
+
+MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename)
+{
+	//1、2必要な変数の宣言とファイルを開く
+	MaterialData materialData;//構築するMaterialData
+	std::string line;//ファイルから読んだ１行を格納するもの
+	std::ifstream file(directoryPath + "/" + filename);//ファイルを開く
+	assert(file.is_open());//とりあえず開けなかったら止める
+
+	while (std::getline(file, line))
+	{
+		std::string identifier;
+		std::istringstream s(line);
+		s >> identifier;
+
+		//identifierに応じた処理
+		if (identifier == "map_Kd")
+		{
+			std::string textureFilename;
+			s >> textureFilename;
+			//連結してファイルパスにする
+			materialData.textureFilepath = directoryPath + "/" + textureFilename;
+		}
+
+	}
+	return materialData;
 
 }
 
@@ -106,14 +140,15 @@ ModelData LoadObjFile(const std::string& dicitionaryPath, const std::string& fil
 			Vector3 normal;
 			s >> normal.x >> normal.y >> normal.z;
 			normals.push_back(normal);
-		}else if (identifier == "f"){
+		}
+		else if (identifier == "f") {
 			VertexData triangle[3];
 			for (int32_t faceVertex = 0; faceVertex < 3; ++faceVertex) {
 				std::string vertexDefinition;
 				s >> vertexDefinition;
 				std::istringstream v(vertexDefinition);
 				uint32_t elementIndices[3];
-				for (int32_t element = 0; element < 3;++element) {
+				for (int32_t element = 0; element < 3; ++element) {
 					std::string index;
 					std::getline(v, index, '/');
 					elementIndices[element] = std::stoi(index);
@@ -131,6 +166,11 @@ ModelData LoadObjFile(const std::string& dicitionaryPath, const std::string& fil
 			modelData.vertices.push_back(triangle[2]);
 			modelData.vertices.push_back(triangle[1]);
 			modelData.vertices.push_back(triangle[0]);
+		}
+		else if (identifier == "mtllib") {
+			std::string materialFilename;
+			s >> materialFilename;
+			modelData.material = LoadMaterialTemplateFile(dicitionaryPath, materialFilename);
 		}
 	}
 	return modelData;
@@ -492,7 +532,7 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ID3D12Resource* textureResource = CreateTextureResource(device, metadata);
 	UploadTextureData(textureResource, mipImages);
 
-
+	
 
 	//#ifdef _DEBUG
 	//	ID3D12Debug1* debugController = nullptr;
@@ -848,7 +888,7 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
 	std::memcpy(vertexData, modelData.vertices.data(), sizeof(VertexData) * modelData.vertices.size());
 
-
+	DirectX::ScratchImage mipImages2 = LoadTexture(modelData.material.textureFilepath);
 
 	//頂点リソースの設定
 	D3D12_RESOURCE_DESC vertexResourceDesc{};
@@ -1042,7 +1082,7 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	device->CreateShaderResourceView(textureResource, &srvDesc, textureSrvHandleCPU);
 
-	
+
 
 	MSG msg{};
 	while (msg.message != WM_QUIT) {
@@ -1119,7 +1159,7 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			//wvp用のCBufferの場所を設定
 			commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
-			
+
 			/*commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());*/
 
 			commandList->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
@@ -1129,7 +1169,7 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			//描画！（DrawCall/ドローコール)。３頂点で１つのインスタンス。インスタンスについては今後
 			commandList->DrawInstanced(6, 1, 0, 0);
-//インスタンス
+			//インスタンス
 			commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
 			commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
