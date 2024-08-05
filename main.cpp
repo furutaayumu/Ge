@@ -13,7 +13,7 @@
 #include"externals/DirectXTex/DirectXTex.h"
 #include"Matrix.h"
 #include"Transform.h"
-#include "vector"
+#include <vector>
 #include <fstream>
 #include <sstream>
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -37,6 +37,7 @@ struct Vector4 {
 struct VertexData {
 	Vector4 position;
 	Vector2 texcord;
+	Vector3 normal;
 };
 
 struct ModelData {
@@ -74,9 +75,9 @@ ModelData LoadObjFile(const std::string& dicitionaryPath, const std::string& fil
 	//必要となる宣言
 	//============//
 	ModelData modelData;
-	std::vector<Vector3> positions;
+	std::vector<Vector4> positions;
 	std::vector<Vector3> normals;
-	std::vector<Vector3> texcoords;
+	std::vector<Vector2> texcoords;
 	std::string line;
 	//ファイルを開く//
 	//============//
@@ -90,75 +91,50 @@ ModelData LoadObjFile(const std::string& dicitionaryPath, const std::string& fil
 		std::istringstream s(line);
 		s >> identifier;//先頭の識別子を読む
 
-		//identifierに応じた処理
-
-		if (identifier == "v")
-		{
+		if (identifier == "v") {
 			Vector4 position;
 			s >> position.x >> position.y >> position.z;
 			position.w = 1.0f;
-			positions.push_back(positions);
+			positions.push_back(position);
 		}
-		else if (identifier == "vt")
-		{
+		else if (identifier == "vt") {
 			Vector2 texcoord;
 			s >> texcoord.x >> texcoord.y;
 			texcoords.push_back(texcoord);
 		}
-		else if (identifier == "vn")
-		{
+		else if (identifier == "vn") {
 			Vector3 normal;
 			s >> normal.x >> normal.y >> normal.z;
 			normals.push_back(normal);
-		}
-		else if (identifier == "f")
-		{
+		}else if (identifier == "f"){
 			VertexData triangle[3];
-			//面は三角形限定。その他は未対応
-			for (int32_t faceVertex = 0; faceVertex < 3; ++faceVertex)
-			{
+			for (int32_t faceVertex = 0; faceVertex < 3; ++faceVertex) {
 				std::string vertexDefinition;
 				s >> vertexDefinition;
-				//頂点の要素へのIndexは「位置/UV/法線」で格納されているので、分解してIndexを取得する
 				std::istringstream v(vertexDefinition);
-
 				uint32_t elementIndices[3];
-
-				for (int32_t element = 0; element < 3; ++element)
-				{
+				for (int32_t element = 0; element < 3;++element) {
 					std::string index;
-					std::getline(v, index, '/');//区切りでインデックスを読んでいく
+					std::getline(v, index, '/');
 					elementIndices[element] = std::stoi(index);
 				}
-
-
-				//要素へのIndexから、実際の要素の値を取得して、頂点を構築する
 				Vector4 position = positions[elementIndices[0] - 1];
 				Vector2 texcoord = texcoords[elementIndices[1] - 1];
 				Vector3 normal = normals[elementIndices[2] - 1];
 				position.x *= -1.0f;
 				normal.x *= -1.0f;
-				texcoord.y = 1.0f - texcoord.y;
-				triangle[faceVertex] = { position,texcoord,normal };
+				texcoord.y *= -1.0f - -texcoord.y;
 				VertexData vertex = { position,texcoord,normal };
 				modelData.vertices.push_back(vertex);
+				triangle[faceVertex] = { position,texcoord,normal };
 			}
-			//		//頂点を逆順で登録することで、回り順を逆にする
-			//		modelData.vertices.push_back(triangle[2]);
-			//		modelData.vertices.push_back(triangle[1]);
-			//		modelData.vertices.push_back(triangle[0]);
-			//	}
-			//	else if (identifier == "mtllib")
-			//	{
-			//		//materialTemplateLibraryファイルの名前を取得する
-			//		std::string materialFilename;
-			//		s >> materialFilename;
-			//		//基本的にObjファイルと同一階層にmtlは存在させるので、ディレクトリ名とファイル名を渡す
-			//		modelData.material = LoadMaterialTemplateFile(directoryPath, materialFilename);
-			//	}
-			//}
-			return modelData;
+			modelData.vertices.push_back(triangle[2]);
+			modelData.vertices.push_back(triangle[1]);
+			modelData.vertices.push_back(triangle[0]);
 		}
+	}
+	return modelData;
+}
 
 std::wstring ConvertString(const std::string& str) {
 	if (str.empty()) {
@@ -856,6 +832,22 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	D3D12_HEAP_PROPERTIES uploadHeapProoerties{};
 	uploadHeapProoerties.Type = D3D12_HEAP_TYPE_UPLOAD;//UploadHeapを使う
 
+	//モデル読み込み//
+	//============//
+	ModelData modelData = LoadObjFile("resource", "plane.obj");
+	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * modelData.vertices.size());
+
+	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
+	vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
+	vertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * modelData.vertices.size());
+	vertexBufferView.StrideInBytes = sizeof(VertexData);
+	//頂点リソースにデータを書き込む//
+	//===========================//
+
+	VertexData* vertexData = nullptr;
+	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
+	std::memcpy(vertexData, modelData.vertices.data(), sizeof(VertexData) * modelData.vertices.size());
+
 
 
 	//頂点リソースの設定
@@ -910,14 +902,14 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	*transformationMatrixDataSprite = worldViewProjectionMatrixSprite;
 
 
-	ID3D12Resource* vertexResource = nullptr;
+	//ID3D12Resource* vertexResource = nullptr;
 	hr = device->CreateCommittedResource(&uploadHeapProoerties, D3D12_HEAP_FLAG_NONE, &vertexResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexResource));
 	assert(SUCCEEDED(hr));
 
 
 
 	//頂点リソースにデータを書き込む
-	VertexData* vertexData = nullptr;
+	/*VertexData* vertexData = nullptr;*/
 	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
 
 	vertexData[0].position = { -0.5f,-0.5f,0.0f,1.0f };
@@ -939,7 +931,7 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	vertexData[5].texcord = { 1.0f,1.0f };
 
 	//頂点バッファビューを作成する
-	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
+	/*D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};*/
 	//リソースの先頭のアドレスから使う
 	vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
 	//仕様するリソースのサイズは頂点３つ分のサイズ
@@ -1139,6 +1131,8 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			commandList->DrawInstanced(6, 1, 0, 0);
 //インスタンス
 			commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+
+			commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
 
 			//実際のcommandListのImGuiの描画コマンドを積む
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
