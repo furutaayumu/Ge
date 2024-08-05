@@ -1018,7 +1018,7 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			//wvp用のCBufferの場所を設定
 			commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
 			
-			commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
+			/*commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());*/
 
 			commandList->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
 
