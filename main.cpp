@@ -47,7 +47,7 @@ struct MaterialData {
 struct ModelData {
 	std::vector<VertexData>vertices;
 	MaterialData material;
-	
+
 };
 
 
@@ -130,18 +130,15 @@ ModelData LoadObjFile(const std::string& dicitionaryPath, const std::string& fil
 			s >> position.x >> position.y >> position.z;
 			position.w = 1.0f;
 			positions.push_back(position);
-		}
-		else if (identifier == "vt") {
+		} else if (identifier == "vt") {
 			Vector2 texcoord;
 			s >> texcoord.x >> texcoord.y;
 			texcoords.push_back(texcoord);
-		}
-		else if (identifier == "vn") {
+		} else if (identifier == "vn") {
 			Vector3 normal;
 			s >> normal.x >> normal.y >> normal.z;
 			normals.push_back(normal);
-		}
-		else if (identifier == "f") {
+		} else if (identifier == "f") {
 			VertexData triangle[3];
 			for (int32_t faceVertex = 0; faceVertex < 3; ++faceVertex) {
 				std::string vertexDefinition;
@@ -158,7 +155,7 @@ ModelData LoadObjFile(const std::string& dicitionaryPath, const std::string& fil
 				Vector3 normal = normals[elementIndices[2] - 1];
 				position.x *= -1.0f;
 				normal.x *= -1.0f;
-				texcoord.y *= -1.0f - -texcoord.y;
+				texcoord.y = 1.0f - texcoord.y;
 				VertexData vertex = { position,texcoord,normal };
 				modelData.vertices.push_back(vertex);
 				triangle[faceVertex] = { position,texcoord,normal };
@@ -166,8 +163,7 @@ ModelData LoadObjFile(const std::string& dicitionaryPath, const std::string& fil
 			modelData.vertices.push_back(triangle[2]);
 			modelData.vertices.push_back(triangle[1]);
 			modelData.vertices.push_back(triangle[0]);
-		}
-		else if (identifier == "mtllib") {
+		} else if (identifier == "mtllib") {
 			std::string materialFilename;
 			s >> materialFilename;
 			modelData.material = LoadMaterialTemplateFile(dicitionaryPath, materialFilename);
@@ -527,12 +523,12 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Log("Complete create D3D12Device!!!\n");
 
 	//テクスチャ
-	DirectX::ScratchImage mipImages = LoadTexture("resource/uvChecker.png");
+	DirectX::ScratchImage mipImages = LoadTexture("resources/uvChecker.png");
 	const DirectX::TexMetadata& metadata = mipImages.GetMetadata();
 	ID3D12Resource* textureResource = CreateTextureResource(device, metadata);
 	UploadTextureData(textureResource, mipImages);
 
-	
+
 
 	//#ifdef _DEBUG
 	//	ID3D12Debug1* debugController = nullptr;
@@ -874,7 +870,7 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	//モデル読み込み//
 	//============//
-	ModelData modelData = LoadObjFile("resource", "plane.obj");
+	ModelData modelData = LoadObjFile("resources", "plane.obj");
 	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(VertexData) * modelData.vertices.size());
 
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
@@ -913,20 +909,22 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	VertexData* vertexDataSprite = nullptr;
 	vertexResourceSprite->Map(0, nullptr, reinterpret_cast<void**>(&vertexDataSprite));
-
-	vertexDataSprite[0].position = { 0.0f,360.0f,0.0f,1.0f };
-	vertexDataSprite[0].texcord = { 0.0f,1.0f };
-	vertexDataSprite[1].position = { 0.0f,0.0f,0.0f,1.0f };
-	vertexDataSprite[1].texcord = { 0.0f,0.0f };
-	vertexDataSprite[2].position = { 640.0f,360.0f,0.0f,1.0f };
-	vertexDataSprite[2].texcord = { 1.0f,1.0f };
-
-	vertexDataSprite[3].position = { 0.0f,0.0f,0.0f,1.0f };
-	vertexDataSprite[3].texcord = { 0.0f,0.0f };
-	vertexDataSprite[4].position = { 640.0f,0.0f,0.0f,1.0f };
+	//左上
+	vertexDataSprite[0].position = { 0.0f,0.0f,0.0f,1.0f };
+	vertexDataSprite[0].texcord = { 0.0f,0.0f };
+	//右上
+	vertexDataSprite[1].position = { 640.0f,0.0f,0.0f,1.0f };
+	vertexDataSprite[1].texcord = { 1.0f,0.0f };
+	//左下
+	vertexDataSprite[2].position = { 0.0f,360.0f,0.0f,1.0f };
+	vertexDataSprite[2].texcord = { 0.0f,1.0f };
+	//右下
+	vertexDataSprite[3].position = {640.0f,360.0f,0.0f,1.0f };
+	vertexDataSprite[3].texcord = { 1.0f,1.0f };
+	/*vertexDataSprite[4].position = { 640.0f,0.0f,0.0f,1.0f };
 	vertexDataSprite[4].texcord = { 1.0f,0.0f };
 	vertexDataSprite[5].position = { 640.0f,360.0f,0.0f,1.0f };
-	vertexDataSprite[5].texcord = { 1.0f,1.0f };
+	vertexDataSprite[5].texcord = { 1.0f,1.0f };*/
 
 	ID3D12Resource* transformationMatrixResourceSprite = CreateBufferResource(device, sizeof(Matrix4x4));
 	Matrix4x4* transformationMatrixDataSprite = nullptr;
@@ -935,11 +933,7 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	Transform transformSprite{ {1.0f,1.0f,1.0f},{0.0f,0.0f,0.0f},{0.0f,0.0f,0.0f} };
 
-	Matrix4x4 worldMatrixSprite = MakeAffineMatrix(transformSprite.scale, transformSprite.rotate, transformSprite.translate);
-	Matrix4x4 viewMatrixSprite = MakeIdentity4x4();
-	Matrix4x4 projectionMatrixSprite = MakeOrthographicMatrix(0.0f, 0.0f, float(kCLientWidth), float(kCLientHeight), 0.0f, 100.0f);
-	Matrix4x4 worldViewProjectionMatrixSprite = Multiply(worldMatrixSprite, Multiply(viewMatrixSprite, projectionMatrixSprite));
-	*transformationMatrixDataSprite = worldViewProjectionMatrixSprite;
+
 
 
 	//ID3D12Resource* vertexResource = nullptr;
@@ -950,7 +944,7 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	//頂点リソースにデータを書き込む
 	/*VertexData* vertexData = nullptr;*/
-	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
+	/*vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
 
 	vertexData[0].position = { -0.5f,-0.5f,0.0f,1.0f };
 	vertexData[0].texcord = { 0.0f,1.0f };
@@ -968,16 +962,16 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	vertexData[4].texcord = { 0.5f,0.0f };
 
 	vertexData[5].position = { 0.5f,-0.5f,-0.5f,1.0f };
-	vertexData[5].texcord = { 1.0f,1.0f };
+	vertexData[5].texcord = { 1.0f,1.0f };*/
 
 	//頂点バッファビューを作成する
 	/*D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};*/
 	//リソースの先頭のアドレスから使う
-	vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
-	//仕様するリソースのサイズは頂点３つ分のサイズ
-	vertexBufferView.SizeInBytes = sizeof(VertexData) * 6;
-	//1頂点当たりのサイズ
-	vertexBufferView.StrideInBytes = sizeof(VertexData);
+	//vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
+	////仕様するリソースのサイズは頂点３つ分のサイズ
+	//vertexBufferView.SizeInBytes = sizeof(VertexData) * modelData.vertices.size();
+	////1頂点当たりのサイズ
+	//vertexBufferView.StrideInBytes = sizeof(VertexData);
 
 	//頂点リソースにデータを書き込む
 
@@ -1089,17 +1083,22 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
-		}
-		else {
+		} else {
 			ImGui_ImplDX12_NewFrame();
 			ImGui_ImplWin32_NewFrame();
 			ImGui::NewFrame();
 			//開発用UIの処理。実際に開発用のUIをを出す場合はここをゲーム固有の処理に置き換える
 			//ImGui::ShowDemoWindow();
 
-			//選択して色が変えられる
+			
 			ImGui::Begin("Window");
 			ImGui::DragFloat3("color", &materialData->x, 0.01f);//ImGui::DragFloat3("color", &materialData->x, 0.01f);
+			ImGui::DragFloat3("Modelrotate", &transform.rotate.x, 0.01f);
+			ImGui::DragFloat3("Modelscale", &transform.scale.x, 0.01f);
+			
+			ImGui::DragFloat3("spriteScale", &transformSprite.scale.x, 0.01f);
+			ImGui::DragFloat3("spriteTranslate", &transformSprite.translate.x, 0.01f);
+			ImGui::DragFloat3("spriteRotate", &transformSprite.rotate.x, 0.01f);
 			ImGui::End();
 
 			transform.rotate.y += 0.03f;
@@ -1113,6 +1112,11 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			Matrix4x4 worldViewprojectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
 			*transformationMatrixData = worldViewprojectionMatrix;
 
+			Matrix4x4 worldMatrixSprite = MakeAffineMatrix(transformSprite.scale, transformSprite.rotate, transformSprite.translate);
+			Matrix4x4 viewMatrixSprite = MakeIdentity4x4();
+			Matrix4x4 projectionMatrixSprite = MakeOrthographicMatrix(0.0f, 0.0f, float(kCLientWidth), float(kCLientHeight), 0.0f, 100.0f);
+			Matrix4x4 worldViewProjectionMatrixSprite = Multiply(worldMatrixSprite, Multiply(viewMatrixSprite, projectionMatrixSprite));
+			*transformationMatrixDataSprite = worldViewProjectionMatrixSprite;
 
 
 			//これから書き込むバックバッファのインデックスを取得
@@ -1149,8 +1153,8 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			//RootSignatureを設定。PSOに設定にしてるけど別途設定が必要
 			commandList->SetGraphicsRootSignature(rootSignature);
 			commandList->SetPipelineState(graphicsPipelineState);//PSOを設定
-			commandList->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);//VBVを設定
-			commandList->IASetIndexBuffer(&indexBufferViewSprite);
+			commandList->IASetVertexBuffers(0, 1, &vertexBufferView);//VBVを設定
+			//commandList->IASetIndexBuffer(&indexBufferViewSprite);
 			//形状を設定。PSOに設定しているものとはまた別。同じものを設定すると考えておけばいい。
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -1158,7 +1162,7 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
 
 			//wvp用のCBufferの場所を設定
-			commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
+			commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
 
 			/*commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());*/
 
@@ -1168,11 +1172,19 @@ int WINAPI	WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			ImGui::Render();
 
 			//描画！（DrawCall/ドローコール)。３頂点で１つのインスタンス。インスタンスについては今後
-			commandList->DrawInstanced(6, 1, 0, 0);
-			//インスタンス
-			commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+			//commandList->DrawInstanced(6, 1, 0, 0);
+			
 
 			commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
+
+			//Spriteの描画
+			commandList->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);  //VBVを設定
+			
+			//TransformationMatrixCBufferの場所を設定
+			commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
+			commandList->IASetIndexBuffer(&indexBufferViewSprite);  //IBVを設定
+			//インスタンス
+			commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
 			//実際のcommandListのImGuiの描画コマンドを積む
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
